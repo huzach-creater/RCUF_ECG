@@ -1,0 +1,7 @@
+comparison,metric,observed_mean_difference,bootstrap_ci95_lower,bootstrap_ci95_upper,favors_revision_when,bootstrap_repetitions
+RCUF-TA (revision) minus RCUF-3 (paper),macro_f1_90,0.0009621964572522623,-0.0011676004288210784,0.0027750019723128128,positive,500
+RCUF-TA (revision) minus RCUF-3 (paper),risk_90,-0.002014059415474989,-0.0038136044104193755,0.00024916943521594655,negative,500
+RCUF-TA (revision) minus RCUF-3 (paper),dense_paurc,-0.0011099670758668773,-0.001989267751293994,-8.571082920252696e-05,negative,500
+RCUF-TA (revision) minus Entropy,macro_f1_90,-2.975215567428968e-05,-0.0018483569782349295,0.0022338637567569943,positive,500
+RCUF-TA (revision) minus Entropy,risk_90,-0.0008580095334392634,-0.0034493475853435407,0.0010445856805816362,negative,500
+RCUF-TA (revision) minus Entropy,dense_paurc,-0.0011791985897671026,-0.002095595856469514,-0.0001911338065142336,negative,500
