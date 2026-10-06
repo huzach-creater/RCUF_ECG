@@ -2,7 +2,6 @@
 
 Reproducibility code and compact artifacts for a five-label, multilabel PTB-XL selective ECG diagnosis study. The repository implements the complete clean, in-distribution experimental path: data preparation, ResNet1D-small training, validation-based label thresholding, temperature scaling, uncertainty scoring, rank-calibrated uncertainty fusion (RCUF), selective evaluation, paired bootstrap analysis, classwise calibration, and subgroup rejection audits.
 
-Plotting code, generated figures, raw PTB-XL waveforms, and robustness experiments are intentionally outside this repository.
 
 ## What is included
 
