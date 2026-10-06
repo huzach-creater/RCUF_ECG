@@ -1,0 +1,10 @@
+{
+  "source": "val",
+  "thresholds": {
+    "NORM": 0.29,
+    "MI": 0.6,
+    "STTC": 0.71,
+    "CD": 0.7,
+    "HYP": 0.73
+  }
+}

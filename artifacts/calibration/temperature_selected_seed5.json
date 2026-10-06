@@ -1,0 +1,10 @@
+{
+  "seed": 5,
+  "mode": "scalar",
+  "temperature": 1.430625081062317,
+  "source": "calibration",
+  "nll_before": 0.4013139009475708,
+  "nll_after": 0.38175255060195923,
+  "selected_temperature_mode": "scalar",
+  "test_used_for_selection": false
+}
