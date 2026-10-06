@@ -4,6 +4,10 @@ from pathlib import Path
 
 import numpy as np
 
+from src.ptbxl.metrics.calibration_metrics import (
+    decision_confidence as pipeline_decision_confidence,
+)
+
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "reproduce_results.py"
 SPEC = importlib.util.spec_from_file_location("reproduce_results", SCRIPT)
@@ -40,6 +44,32 @@ class CoreMetricTests(unittest.TestCase):
         calibration = pd.DataFrame({"a": [0.0, 1.0], "b": [1.0, 0.0]})
         result = MODULE.rank_fusion(calibration, calibration, ["a", "b"])
         np.testing.assert_allclose(result, np.array([5.0 / 6.0, 5.0 / 6.0]))
+
+    def test_decision_confidence_uses_operational_prediction(self):
+        probability = np.array([0.40, 0.70, 0.20])
+        prediction = np.array([1, 0, 0])
+        np.testing.assert_allclose(
+            MODULE.decision_confidence(probability, prediction),
+            np.array([0.40, 0.30, 0.80]),
+        )
+        np.testing.assert_allclose(
+            pipeline_decision_confidence(probability, prediction),
+            np.array([0.40, 0.30, 0.80]),
+        )
+
+    def test_operational_ece_respects_non_default_threshold_decisions(self):
+        target = np.array([1, 0, 0])
+        probability = np.array([0.40, 0.70, 0.20])
+        prediction = np.array([1, 0, 0])
+        expected = MODULE.binary_ece(
+            np.ones(3, dtype=int), np.array([0.40, 0.30, 0.80])
+        )
+        self.assertTrue(
+            np.isclose(
+                MODULE.operational_decision_ece(target, probability, prediction),
+                expected,
+            )
+        )
 
 
 if __name__ == "__main__":

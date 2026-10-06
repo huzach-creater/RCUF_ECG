@@ -26,7 +26,7 @@ def metrics_for(df):
     y = df[[f"true_{l}" for l in LABEL_ORDER]].values.astype(int)
     p = df[[f"cal_prob_{l}" for l in LABEL_ORDER]].values.astype(float)
     pred = df[[f"cal_pred_{l}" for l in LABEL_ORDER]].values.astype(int)
-    cal = calibration_metrics(y, p, np.array([0.5] * len(LABEL_ORDER)))
+    cal = calibration_metrics(y, p, predictions=pred)
     sample_error = 1 - np.array([1.0 if (yt == yp).all() and yt.sum() == 0 else (2 * ((yt & yp).sum()) / max(1, 2 * ((yt & yp).sum()) + ((yp == 1) & (yt == 0)).sum() + ((yp == 0) & (yt == 1)).sum())) for yt, yp in zip(y.astype(bool), pred.astype(bool))])
     return {
         "macro_f1": float(f1_score(y, pred, average="macro", zero_division=0)),
@@ -69,7 +69,7 @@ def main():
     res.to_csv(out / f"metrics/ptbxl_accepted_rejected_reliability_seed{args.seed}.csv", index=False)
     r90a = res[(res.coverage == 0.9) & (res.subset == "accepted")].iloc[0]
     r90r = res[(res.coverage == 0.9) & (res.subset == "rejected")].iloc[0]
-    report = ["# P5 Step3 Accepted Rejected Reliability Report", "", f"Accepted@90 sample error: {r90a.sample_error}", f"Rejected@90 sample error: {r90r.sample_error}", f"Rejected/Accepted ratio: {r90r.sample_error / r90a.sample_error if r90a.sample_error > 0 else None}", f"Accepted@90 Micro_ECE: {r90a.Micro_ECE}", f"Rejected@90 Micro_ECE: {r90r.Micro_ECE}"]
+    report = ["# P5 Step3 Accepted Rejected Reliability Report", "", f"Accepted@90 sample error: {r90a.sample_error}", f"Rejected@90 sample error: {r90r.sample_error}", f"Rejected/Accepted ratio: {r90r.sample_error / r90a.sample_error if r90a.sample_error > 0 else None}", f"Accepted@90 operational-decision Micro-ECE: {r90a.Micro_ECE}", f"Rejected@90 operational-decision Micro-ECE: {r90r.Micro_ECE}"]
     (out / "reports/p5_step3_accepted_rejected_reliability_report.md").write_text("\n".join(report), encoding="utf-8")
     print(json.dumps({"status": "PASS"}, indent=2))
 

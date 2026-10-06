@@ -68,9 +68,16 @@ def main():
     risk_col = args.selected_risk if args.selected_risk in risk.columns else "Risk_rank_fusion"
     out_df[args.selected_risk] = risk[risk_col].values
     out_df.to_csv(out / f"predictions/ptbxl_test_calibrated_predictions_seed{args.seed}.csv", index=False)
-    payload = {"raw": raw_m, "calibrated": cal_m, "temperature": temp, "threshold_source": "validation", "test_used_for_threshold_or_temperature": False}
+    payload = {
+        "raw": raw_m,
+        "calibrated": cal_m,
+        "temperature": temp,
+        "threshold_source": "validation",
+        "test_used_for_threshold_or_temperature": False,
+        "ece_definition": "operational-decision confidence q=p for a positive prediction and q=1-p for a negative prediction",
+    }
     (out / f"metrics/ptbxl_calibration_all_test_seed{args.seed}.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    lines = ["# P5 Step2 Calibration Report", "", f"Raw NLL: {raw_m['NLL']}", f"Calibrated NLL: {cal_m['NLL']}", f"Raw Brier: {raw_m['Brier']}", f"Calibrated Brier: {cal_m['Brier']}", f"Raw Micro_ECE: {raw_m['Micro_ECE']}", f"Calibrated Micro_ECE: {cal_m['Micro_ECE']}", f"Raw Classwise_ECE_mean: {raw_m['Classwise_ECE_mean']}", f"Calibrated Classwise_ECE_mean: {cal_m['Classwise_ECE_mean']}"]
+    lines = ["# P5 Step2 Calibration Report", "", "ECE uses confidence in each validation-threshold decision: q=p for a positive prediction and q=1-p for a negative prediction.", "", f"Raw NLL: {raw_m['NLL']}", f"Calibrated NLL: {cal_m['NLL']}", f"Raw Brier: {raw_m['Brier']}", f"Calibrated Brier: {cal_m['Brier']}", f"Raw operational-decision Micro-ECE: {raw_m['Micro_ECE']}", f"Calibrated operational-decision Micro-ECE: {cal_m['Micro_ECE']}", f"Raw operational-decision class-wise ECE mean: {raw_m['Classwise_ECE_mean']}", f"Calibrated operational-decision class-wise ECE mean: {cal_m['Classwise_ECE_mean']}"]
     (out / "reports/p5_step2_calibration_report.md").write_text("\n".join(lines), encoding="utf-8")
     print(json.dumps({"status": "PASS", "raw_nll": raw_m["NLL"], "cal_nll": cal_m["NLL"]}, indent=2))
 

@@ -13,8 +13,10 @@ The archived predictions reproduce the manuscript baseline, calibration, and pap
 | RCUF Risk@90 | 0.237200 | 0.237166 | 0.003300 | 0.003321 | True |
 | RCUF pAURC (coarse) | 0.102600 | 0.102615 | 0.001700 | 0.001683 | True |
 | RCUF rejected/accepted ratio | 2.235700 | 2.235683 | 0.254000 | 0.254007 | True |
-| Raw Micro-ECE | 0.047400 | 0.047411 | 0.009800 | 0.009827 | True |
-| Temperature-scaled Micro-ECE | 0.031100 | 0.031090 | 0.005300 | 0.005332 | True |
+| Raw operational-decision Micro-ECE | 0.059500 | 0.059488 | 0.011300 | 0.011318 | True |
+| Temperature-scaled operational-decision Micro-ECE | 0.047500 | 0.047532 | 0.008900 | 0.008934 | True |
+| Raw operational-decision mean class-wise ECE | 0.070600 | 0.070600 | 0.007700 | 0.007723 | True |
+| Temperature-scaled operational-decision mean class-wise ECE | 0.062100 | 0.062072 | 0.006900 | 0.006885 | True |
 
 ## Test-set selective results
 
@@ -60,9 +62,9 @@ Intervals use the same aligned-record resample for all five models and average t
 | RCUF-TA (revision) minus Entropy | risk_90 | -0.000858 | [-0.003449, 0.001045] | negative |
 | RCUF-TA (revision) minus Entropy | dense_paurc | -0.001179 | [-0.002096, -0.000191] | negative |
 
-## Classwise event-probability calibration
+## Class-wise event-probability calibration
 
-This event-probability ECE is different from the manuscript's correctness-based Micro-ECE. It exposes label-level behavior hidden by the aggregate metric.
+This event-probability ECE is different from the manuscript's operational-decision ECE. It compares event probabilities directly with binary labels and exposes label-level behavior hidden by the aggregate decision metric.
 
 | Label | Raw ECE | Temperature-scaled ECE |
 |---|---:|---:|
@@ -72,7 +74,7 @@ This event-probability ECE is different from the manuscript's correctness-based 
 | CD | 0.094586 ± 0.025255 | 0.112902 ± 0.026914 |
 | HYP | 0.196485 ± 0.028384 | 0.210525 ± 0.029382 |
 
-The unweighted mean across labels changes from 0.104579 to 0.111349; therefore the improved Micro-ECE should not be described as uniform classwise calibration improvement.
+The unweighted mean event-probability ECE across labels changes from 0.104579 to 0.111349. This is a separate diagnostic and does not contradict the improvement in operational-decision Micro-ECE or mean class-wise ECE.
 
 ## Subgroup rejection-rate check
 

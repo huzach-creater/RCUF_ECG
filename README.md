@@ -34,7 +34,7 @@ The main results can be recalculated from the saved predictions without download
 python scripts/reproduce_results.py --bootstrap 500
 ```
 
-The output tables are written to `results/`.
+The output tables are written to `results/`. Calibration summaries use the validation-threshold operational decisions; event-probability ECE is reported separately.
 
 ## Training from scratch
 

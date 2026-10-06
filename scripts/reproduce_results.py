@@ -166,6 +166,31 @@ def binary_ece(y_true: np.ndarray, probability: np.ndarray, bins: int = 15) -> f
     return float(result)
 
 
+def decision_confidence(probability: np.ndarray, prediction: np.ndarray) -> np.ndarray:
+    """Confidence assigned to the decision made at the operational threshold."""
+    probability = np.asarray(probability, dtype=float)
+    prediction = np.asarray(prediction, dtype=int)
+    if probability.shape != prediction.shape:
+        raise ValueError("Probability and prediction arrays must have the same shape")
+    return np.where(prediction == 1, probability, 1.0 - probability)
+
+
+def operational_decision_ece(
+    y_true: np.ndarray,
+    probability: np.ndarray,
+    prediction: np.ndarray,
+    bins: int = 15,
+) -> float:
+    """ECE using decision correctness and confidence in the chosen class."""
+    y_true = np.asarray(y_true, dtype=int)
+    prediction = np.asarray(prediction, dtype=int)
+    if y_true.shape != prediction.shape:
+        raise ValueError("Target and prediction arrays must have the same shape")
+    confidence = decision_confidence(probability, prediction)
+    correctness = (prediction == y_true).astype(int)
+    return binary_ece(correctness.ravel(), confidence.ravel(), bins=bins)
+
+
 def mean_sd(values: list[float] | np.ndarray) -> tuple[float, float]:
     values = np.asarray(values, dtype=float)
     return float(np.mean(values)), float(np.std(values, ddof=1))
@@ -392,12 +417,12 @@ def write_report(
     lines += ["", "## Paired bootstrap comparisons", "", "Intervals use the same aligned-record resample for all five models and average the paired seed-wise differences. They are conditional on these five trained models and do not replace external validation.", "", "| Comparison | Metric | Difference | 95% bootstrap CI | Direction favoring revision |", "|---|---|---:|---:|---|"]
     for row in bootstrap.itertuples():
         lines.append(f"| {row.comparison} | {row.metric} | {fmt(row.observed_mean_difference)} | [{fmt(row.bootstrap_ci95_lower)}, {fmt(row.bootstrap_ci95_upper)}] | {row.favors_revision_when} |")
-    lines += ["", "## Classwise event-probability calibration", "", "This event-probability ECE is different from the manuscript's correctness-based Micro-ECE. It exposes label-level behavior hidden by the aggregate metric.", "", "| Label | Raw ECE | Temperature-scaled ECE |", "|---|---:|---:|"]
+    lines += ["", "## Class-wise event-probability calibration", "", "This event-probability ECE is different from the manuscript's operational-decision ECE. It compares event probabilities directly with binary labels and exposes label-level behavior hidden by the aggregate decision metric.", "", "| Label | Raw ECE | Temperature-scaled ECE |", "|---|---:|---:|"]
     for row in ece_summary.itertuples():
         lines.append(f"| {row.label} | {fmt(row.raw_event_probability_ece_mean)} ± {fmt(row.raw_event_probability_ece_sd)} | {fmt(row.calibrated_event_probability_ece_mean)} ± {fmt(row.calibrated_event_probability_ece_sd)} |")
     raw_mean = ece_summary["raw_event_probability_ece_mean"].mean()
     calibrated_mean = ece_summary["calibrated_event_probability_ece_mean"].mean()
-    lines += ["", f"The unweighted mean across labels changes from {raw_mean:.6f} to {calibrated_mean:.6f}; therefore the improved Micro-ECE should not be described as uniform classwise calibration improvement.", "", "## Subgroup rejection-rate check", "", "Rejection rates below are at global 90% coverage. They are descriptive because age/sex were not used for stratified model selection.", "", "| Method | Group | Rejection rate |", "|---|---|---:|"]
+    lines += ["", f"The unweighted mean event-probability ECE across labels changes from {raw_mean:.6f} to {calibrated_mean:.6f}. This is a separate diagnostic and does not contradict the improvement in operational-decision Micro-ECE or mean class-wise ECE.", "", "## Subgroup rejection-rate check", "", "Rejection rates below are at global 90% coverage. They are descriptive because age/sex were not used for stratified model selection.", "", "| Method | Group | Rejection rate |", "|---|---|---:|"]
     for row in subgroup_summary.itertuples():
         lines.append(f"| {row.method} | {row.group_type}={row.group} | {fmt(row.rejection_rate_mean)} ± {fmt(row.rejection_rate_sd)} |")
     lines += [
@@ -544,13 +569,35 @@ def main() -> None:
         paper_calibration_rows.append(
             {
                 "seed": seed,
-                "raw_micro_ece": binary_ece(
-                    (raw_classification == y_true).ravel().astype(int),
-                    np.maximum(raw_prob, 1.0 - raw_prob).ravel(),
+                "raw_micro_ece": operational_decision_ece(
+                    y_true, raw_prob, raw_classification
                 ),
-                "calibrated_micro_ece": binary_ece(
-                    (calibrated_classification == y_true).ravel().astype(int),
-                    np.maximum(cal_prob, 1.0 - cal_prob).ravel(),
+                "calibrated_micro_ece": operational_decision_ece(
+                    y_true, cal_prob, calibrated_classification
+                ),
+                "raw_classwise_ece_mean": float(
+                    np.mean(
+                        [
+                            operational_decision_ece(
+                                y_true[:, index],
+                                raw_prob[:, index],
+                                raw_classification[:, index],
+                            )
+                            for index in range(len(LABELS))
+                        ]
+                    )
+                ),
+                "calibrated_classwise_ece_mean": float(
+                    np.mean(
+                        [
+                            operational_decision_ece(
+                                y_true[:, index],
+                                cal_prob[:, index],
+                                calibrated_classification[:, index],
+                            )
+                            for index in range(len(LABELS))
+                        ]
+                    )
                 ),
             }
         )
@@ -561,6 +608,12 @@ def main() -> None:
                     "label": label,
                     "raw_event_probability_ece": binary_ece(y_true[:, index], raw_prob[:, index]),
                     "calibrated_event_probability_ece": binary_ece(y_true[:, index], cal_prob[:, index]),
+                    "raw_operational_decision_ece": operational_decision_ece(
+                        y_true[:, index], raw_prob[:, index], raw_classification[:, index]
+                    ),
+                    "calibrated_operational_decision_ece": operational_decision_ece(
+                        y_true[:, index], cal_prob[:, index], calibrated_classification[:, index]
+                    ),
                 }
             )
 
@@ -608,7 +661,17 @@ def main() -> None:
     correlation_summary = aggregate_seed_rows(pd.DataFrame(correlation_rows), ["score_1", "score_2"], ["spearman_rho"])
     class_summary = aggregate_seed_rows(pd.DataFrame(class_rows), ["method", "subset", "label"], ["prevalence", "f1"])
     subgroup_summary = aggregate_seed_rows(pd.DataFrame(subgroup_rows), ["method", "group_type", "group"], ["n_records", "rejection_rate", "macro_f1_all", "sample_error_all"])
-    ece_summary = aggregate_seed_rows(pd.DataFrame(ece_rows), ["label"], ["raw_event_probability_ece", "calibrated_event_probability_ece"])
+    ece_by_seed = pd.DataFrame(ece_rows)
+    ece_summary = aggregate_seed_rows(
+        ece_by_seed,
+        ["label"],
+        [
+            "raw_event_probability_ece",
+            "calibrated_event_probability_ece",
+            "raw_operational_decision_ece",
+            "calibrated_operational_decision_ece",
+        ],
+    )
     reliability_summary = aggregate_seed_rows(pd.DataFrame(reliability_rows), ["subset"], ["n_records", "sample_f1_loss", "exact_match_error", "brier", "nll", "macro_f1"])
 
     targets = {
@@ -624,8 +687,10 @@ def main() -> None:
             "RCUF Risk@90": (0.2372, 0.0033, paper_rows["risk_90"].to_numpy()),
             "RCUF pAURC (coarse)": (0.1026, 0.0017, paper_rows["coarse_paurc"].to_numpy()),
             "RCUF rejected/accepted ratio": (2.2357, 0.2540, paper_rows["error_ratio_90"].to_numpy()),
-            "Raw Micro-ECE": (0.0474, 0.0098, paper_calibration["raw_micro_ece"].to_numpy()),
-            "Temperature-scaled Micro-ECE": (0.0311, 0.0053, paper_calibration["calibrated_micro_ece"].to_numpy()),
+            "Raw operational-decision Micro-ECE": (0.0595, 0.0113, paper_calibration["raw_micro_ece"].to_numpy()),
+            "Temperature-scaled operational-decision Micro-ECE": (0.0475, 0.0089, paper_calibration["calibrated_micro_ece"].to_numpy()),
+            "Raw operational-decision mean class-wise ECE": (0.0706, 0.0077, paper_calibration["raw_classwise_ece_mean"].to_numpy()),
+            "Temperature-scaled operational-decision mean class-wise ECE": (0.0621, 0.0069, paper_calibration["calibrated_classwise_ece_mean"].to_numpy()),
         }
     )
     reproduction_rows = []
@@ -659,9 +724,44 @@ def main() -> None:
         "accepted_rejected_per_class_summary.csv": class_summary,
         "subgroup_rejection_by_seed.csv": pd.DataFrame(subgroup_rows),
         "subgroup_rejection_summary.csv": subgroup_summary,
-        "classwise_event_ece_by_seed.csv": pd.DataFrame(ece_rows),
-        "classwise_event_ece_summary.csv": ece_summary,
+        "classwise_event_ece_by_seed.csv": ece_by_seed[
+            [
+                "seed",
+                "label",
+                "raw_event_probability_ece",
+                "calibrated_event_probability_ece",
+            ]
+        ],
+        "classwise_event_ece_summary.csv": ece_summary[
+            [
+                "label",
+                "n_seeds",
+                "raw_event_probability_ece_mean",
+                "raw_event_probability_ece_sd",
+                "calibrated_event_probability_ece_mean",
+                "calibrated_event_probability_ece_sd",
+            ]
+        ],
+        "operational_decision_classwise_ece_by_seed.csv": ece_by_seed[
+            [
+                "seed",
+                "label",
+                "raw_operational_decision_ece",
+                "calibrated_operational_decision_ece",
+            ]
+        ],
+        "operational_decision_classwise_ece_summary.csv": ece_summary[
+            [
+                "label",
+                "n_seeds",
+                "raw_operational_decision_ece_mean",
+                "raw_operational_decision_ece_sd",
+                "calibrated_operational_decision_ece_mean",
+                "calibrated_operational_decision_ece_sd",
+            ]
+        ],
         "paper_micro_ece_by_seed.csv": paper_calibration,
+        "operational_decision_ece_by_seed.csv": paper_calibration,
         "accepted_rejected_reliability_by_seed.csv": pd.DataFrame(reliability_rows),
         "accepted_rejected_reliability_summary.csv": reliability_summary,
         "paired_bootstrap_differences.csv": bootstrap,
