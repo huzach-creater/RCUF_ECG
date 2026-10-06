@@ -1,0 +1,27 @@
+seed: 1
+epochs: 60
+batch_size: 16
+gradient_accumulation_steps: 4
+effective_batch_size: 64
+lr: 0.001
+weight_decay: 0.0001
+early_stop_patience: 10
+monitor_metric: val_macro_auc
+device: cuda
+num_workers: 2
+prefer_wfdb_streaming: true
+
+loss: bce_with_logits
+pos_weight_clip: 20.0
+gradient_clip_norm: 5.0
+
+threshold_default: 0.5
+model_size: small
+
+scheduler: reduce_on_plateau
+scheduler_patience: 4
+scheduler_factor: 0.5
+min_lr: 0.00001
+
+amp: false
+save_best_only: true

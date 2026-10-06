@@ -1,0 +1,9 @@
+model_name: resnet1d
+input_channels: 12
+input_length: 1000
+num_classes: 5
+model_size: small
+base_channels: 32
+embedding_dim: 256
+dropout: 0.2
+use_batchnorm: true

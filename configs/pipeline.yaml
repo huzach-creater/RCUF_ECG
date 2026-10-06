@@ -1,0 +1,17 @@
+seeds: [1, 2, 3, 4, 5]
+
+data:
+  train: outputs_ptbxl/data/ptbxl_train_100hz.npz
+  val: outputs_ptbxl/data/ptbxl_val_100hz.npz
+  cal: outputs_ptbxl/data/ptbxl_cal_100hz.npz
+  test: outputs_ptbxl/data/ptbxl_test_100hz.npz
+
+model:
+  config: configs/model.yaml
+
+train:
+  config: configs/training.yaml
+
+risk:
+  selected_risk: RCUF_3
+  coverage_main: 0.90
