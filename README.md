@@ -78,5 +78,3 @@ python scripts/run_seed.py \
 ```bash
 python -m unittest discover -s tests -v
 ```
-
-Raw PTB-XL waveforms are not included in this repository. Figure-generation code and noise experiments are also excluded.
